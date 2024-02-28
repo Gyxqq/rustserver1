@@ -103,6 +103,30 @@ async fn uploadimg(deque: &State<Arc<Mutex<VecDeque<String>>>>,type0: String,tag
     };
     Ok(format!("{}", json.dump()))
 }
+#[get("/getimgstat_bytag?<tag>")]
+fn getimgstat_bytag(tag: String) -> Result<String, std::io::Error> {
+    let connect = db.lock().unwrap();
+    let conn = Connection::open("img.db").unwrap();
+    let query=format!("SELECT * FROM img WHERE usertag='{}'",tag);
+    let mut stmt = conn.prepare(query).unwrap();
+    let mut imglist = json::JsonValue::new_array();
+    //为空返回异常
+    if stmt.next().unwrap() == sqlite::State::Done {
+        return Ok(format!("no img found by tag:{}",tag));
+    }
+    while let sqlite::State::Row = stmt.next().unwrap() {
+        let filename: String = stmt.read(1).unwrap();
+        let usertag: String = stmt.read(2).unwrap();
+        let outline_score: String = stmt.read(3).unwrap();
+        let img = json::object! {
+            "filename" => filename,
+            "usertag" => usertag,
+            "outline_score" => outline_score
+        };
+        imglist.push(img).unwrap();
+    }
+    Ok(format!("{}", imglist.dump()))
+}
 
 #[launch]
 fn rocket() -> _ {
@@ -130,4 +154,5 @@ fn rocket() -> _ {
             .mount("/", rocket::routes![uploadimg])
             .mount("/res", FileServer::from("res/"))
             .mount("/", routes![cleardatabase])
+            .mount("/", routes![getimgstat_bytag])
 }
