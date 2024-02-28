@@ -19,15 +19,20 @@ jobs:
         run: |
           cargo build 
           mv target/debug/server.exe server.exe
-          
+
+      - name: Get the version
+        id: get_version
+        run: echo "::set-output name=version::$(date +'%Y%m%d%H%M%S')"
+        shell: bash
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GYX }}
         with:
-          tag_name: ${{ github.sha }}
-          release_name: Release ${{ github.sha }}
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: Release ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
 
@@ -35,7 +40,7 @@ jobs:
         id: upload-release-asset 
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GYX}}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./server.exe
