@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate rocket;
-
+use rocket::State;
 use rocket::data::ToByteUnit;
 use rocket::fs::FileServer;
 use rocket::tokio::fs::{create_dir_all, File};
@@ -10,7 +10,10 @@ use sqlite::Connection;
 use std::sync::Mutex;
 use uuid::Uuid;
 use std::env;
+use std::collections::vec_deque::{self, VecDeque};
+use json;
 static db: Mutex<i32> = Mutex::new(0);
+//static deque : Mutex<i32> = Mutex::new(0);
 
 #[get("/hellow")]
 fn hello() -> Result<String, std::io::Error> {
@@ -18,13 +21,12 @@ fn hello() -> Result<String, std::io::Error> {
 }
 
 #[post("/uploadimg?<type0>&<tag>", data = "<data>")]
-async fn uploadimg(type0:String,tag:String,data: Data<'_>,) -> Result<String, std::io::Error> {
+async fn uploadimg(deque: &State<Mutex<VecDeque<String>>>,type0:String,tag:String,data: Data<'_>,) -> Result<String, std::io::Error> {
     let mut filename = Uuid::new_v4().to_string() + "." + &type0;
     filename = "img/".to_string() + &filename;
     create_dir_all("img/").await?;
     let mut file = File::create(&filename).await?;
     let stream = data.open(10.mebibytes()).into_bytes().await?;
-
     let buff = stream.into_inner();
     //把data作为imgdata结构体打开
 
@@ -44,8 +46,15 @@ async fn uploadimg(type0:String,tag:String,data: Data<'_>,) -> Result<String, st
         );
         conn.execute(query).unwrap();
     }
-
-    Ok(format!("load image success, filename: {},usertag:{}", filename,tag))
+    {
+        let mut deque = deque.lock().unwrap();
+        deque.push_back(filename.clone());
+    }
+    let json = json::object! {
+        "filename" => filename,
+        "usertag" => tag
+    };
+    Ok(format!("{}", json.dump()))
 }
 
 #[launch]
@@ -64,7 +73,7 @@ fn rocket() -> _ {
         println!("database open success");
     }
 
-    rocket::build()
+    rocket::build().manage(Mutex::new(VecDeque::<String>::new()))
         .mount("/", routes![hello])
         .mount("/", rocket::routes![uploadimg])
         .mount("/res", FileServer::from("res/"))
