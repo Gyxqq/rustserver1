@@ -14,61 +14,60 @@ use std::thread::sleep;
 use std::time::Duration;
 use std::{env, thread};
 use std::sync::Arc;
+use threadpool::ThreadPool;
 use uuid::Uuid;
 static db: Mutex<i32> = Mutex::new(0);
-//static deque : Mutex<i32> = Mutex::new(0);
-fn process(deque: &Arc<Mutex<VecDeque<String>>>, len: i32) {
+static config_passwd: &'static str = "123456";
+fn img_process(filename: &String) {
+    println!("img_process:{}", filename);
+    thread::sleep(Duration::from_secs(5));
+}
+fn process(deque: &Arc<Mutex<VecDeque<String>>>, num: i32) {
+    let pool = ThreadPool::new(num as usize);
     loop {
-        let mut now_queue = VecDeque::<String>::new();
-        {
-            let mut deque = deque.lock().unwrap();
-            now_queue = deque.clone();
-        }
-        if now_queue.is_empty() {
-            sleep(Duration::from_secs(5));
+        let empty={
+            let deque = deque.lock().unwrap();
+            deque.is_empty()
+        };
+
+        if empty {
+            sleep(Duration::from_secs(1));
             continue;
         }
-        if now_queue.len() < len as usize {
-            for i in 1..now_queue.len() {
-                println!("deque pop : {}", now_queue.pop_front().unwrap());
-                thread::spawn(|| {
-                    sleep(Duration::from_secs(5));
-                })
-                .join()
-                .unwrap();
-            }
-            for i in 1..now_queue.len() {
-                let mut deque = deque.lock().unwrap();
-                deque.pop_front();
-            }
-        } else {
-            for i in 1..len {
-                println!("deque pop : {}", now_queue.pop_front().unwrap());
-                thread::spawn(|| {
-                    sleep(Duration::from_secs(5));
-                })
-                .join()
-                .unwrap();
-            }
-            for i in 1..len {
-                let mut deque = deque.lock().unwrap();
-                deque.pop_front();
-            }
-        }
+        let filename = {
+            let mut deque = deque.lock().unwrap();
+            deque.pop_front().unwrap()
+        };
+        pool.execute(move || {
+            img_process(&filename);
+            println!("img_process:{}", &filename)
+        });
     }
 }
+
+
 #[get("/hellow")]
 fn hello() -> Result<String, std::io::Error> {
     Ok(format!("Hello!"))
 }
-
+#[get("/config/cleardatabase?<password>")]
+fn cleardatabase(password:String) -> Result<String, std::io::Error> {
+    if password !=config_passwd  {
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "password error"));
+    }
+    let connect = db.lock().unwrap();
+    let conn = Connection::open("img.db").unwrap();
+    conn.execute("DELETE FROM img").unwrap();
+    //create img table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS img (id INTEGER PRIMARY KEY,filename TEXT NOT NULL
+        ,usertag TEXT NOT NULL,outline_score TEXT NOT NULL
+        )",
+    ).unwrap();
+    Ok(format!("cleardatabase scuess!"))
+}
 #[post("/uploadimg?<type0>&<tag>", data = "<data>")]
-async fn uploadimg(
-    deque: &State<Arc<Mutex<VecDeque<String>>>>,
-    type0: String,
-    tag: String,
-    data: Data<'_>,
-) -> Result<String, std::io::Error> {
+async fn uploadimg(deque: &State<Arc<Mutex<VecDeque<String>>>>,type0: String,tag: String,data: Data<'_>) -> Result<String, std::io::Error> {
     let mut filename = Uuid::new_v4().to_string() + "." + &type0;
     filename = "img/".to_string() + &filename;
     create_dir_all("img/").await?;
@@ -130,4 +129,5 @@ fn rocket() -> _ {
             .mount("/", routes![hello])
             .mount("/", rocket::routes![uploadimg])
             .mount("/res", FileServer::from("res/"))
+            .mount("/", routes![cleardatabase])
 }

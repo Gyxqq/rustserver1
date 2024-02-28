@@ -10,3 +10,4 @@ rocket="*"
 json="*"
 uuid = { version = "*", features = ["v4"] }
 sqlite = { version = "*", features = ["bundled"] }
+threadpool="*"
