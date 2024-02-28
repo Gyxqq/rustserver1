@@ -2,20 +2,16 @@
 extern crate rocket;
 
 use rocket::data::ToByteUnit;
-use rocket::form::Form;
 use rocket::fs::FileServer;
 use rocket::tokio::fs::{create_dir_all, File};
 use rocket::tokio::io::AsyncWriteExt;
 use rocket::Data;
-use sqlite::{Connection, Type};
+use sqlite::Connection;
 use std::sync::Mutex;
 use uuid::Uuid;
 use std::env;
 static db: Mutex<i32> = Mutex::new(0);
-struct imgdata {
-    usertag: String,
-    data: Vec<u8>,
-}
+
 #[get("/hellow")]
 fn hello() -> Result<String, std::io::Error> {
     Ok(format!("Hello!"))
