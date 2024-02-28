@@ -12,7 +12,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
@@ -20,8 +20,8 @@ jobs:
 
       - name: Build project
         run: |
-          cargo build --release
-          mv target/debug/server server
+          cargo build 
+          mv target/debug/server.exe server.exe
 
       - name: Create Release
         id: create_release
@@ -41,6 +41,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./server
-          asset_name: server
+          asset_path: ./server.exe
+          asset_name: server.exe
           asset_content_type: application/octet-stream
