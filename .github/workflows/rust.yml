@@ -24,7 +24,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: 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
+          GITHUB_TOKEN: ${{ secrets.gyx }}
         with:
           tag_name: ${{ github.sha }}
           release_name: Release ${{ github.sha }}
