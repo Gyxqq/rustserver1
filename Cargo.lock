@@ -1019,6 +1019,7 @@ name = "server"
 version = "0.1.0"
 dependencies = [
  "json",
+ "rand",
  "rocket",
  "sqlite",
  "threadpool",
