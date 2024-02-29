@@ -8,8 +8,6 @@ import sys
 
 # 核心算法
 def RLOF(data, k, reg=1e-3):
-    # print("Data shape:", data.shape, file=sys.stderr)  # 输出到 stderr
-    # print("Data values:", data, file=sys.stderr)  # 输出到 stderr
     n_samples, n_dim = data.shape
 
     dist = cdist(data, data)
@@ -58,15 +56,12 @@ def RLOF(data, k, reg=1e-3):
 # 初始化图片为一维数组
 def convert_to_num(img_path):
     try:
-        img = Image.open(img_path)
+        img = Image.open(img_path).convert('RGB')
     except:
         print('图片路径错误', file=sys.stderr)
         return
     img = img.resize((64, 64))
     img = np.array(img)
-    # print("Image data type:", img.dtype, file=sys.stderr)  # 输出到 stderr
-    # print("Image shape:", img.shape, file=sys.stderr)  # 输出到 stderr
-    # print("Image values:", img, file=sys.stderr)  # 输出到 stderr
     img = img.reshape(1, -1)
     return img
 
@@ -75,11 +70,9 @@ def read_dataset():
     try:
         data = pd.read_csv('data.csv', header=None)
     except:
+        # 输出到stderr
         print('数据集路径错误', file=sys.stderr)
         return
-    # print("Dataset data type:", data.dtypes, file=sys.stderr)  # 输出到 stderr
-    # print("Dataset shape:", data.shape, file=sys.stderr)  # 输出到 stderr
-    # print("Dataset values:", data, file=sys.stderr)  # 输出到 stderr
     return data
 
 # 异常检测
