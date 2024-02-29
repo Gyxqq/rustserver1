@@ -24,6 +24,15 @@ jobs:
         id: get_version
         run: echo "::set-output name=version::$(date +'%Y%m%d%H%M%S')"
         shell: bash
+        
+      - name: Install 7-Zip
+        run: |
+          choco install 7zip
+          
+      - name: Archive production artifacts
+        run: |
+          7z a artifacts.zip ./server.exe ./res ./Rocket.toml
+
 
       - name: Create Release
         id: create_release
@@ -43,6 +52,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GYX}}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./server.exe
-          asset_name: server.exe
+          asset_path: artifacts.zip
+          asset_name: artifacts.zip
           asset_content_type: application/octet-stream
