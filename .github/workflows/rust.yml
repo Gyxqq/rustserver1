@@ -17,8 +17,8 @@ jobs:
 
       - name: Build project
         run: |
-          cargo build 
-          mv target/debug/server.exe server.exe
+          cargo build -r
+          mv target/release/server.exe server.exe
 
       - name: Get the version
         id: get_version
