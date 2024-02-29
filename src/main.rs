@@ -127,7 +127,27 @@ fn getimgstat_bytag(tag: String) -> Result<String, std::io::Error> {
     }
     Ok(format!("{}", imglist.dump()))
 }
-
+#[get("/getimgstat_byfilename?<filename>")]
+fn getimgstat_byfilename(filename: String) -> Result<String, std::io::Error> {
+    let connect = db.lock().unwrap();
+    let conn = Connection::open("img.db").unwrap();
+    let query=format!("SELECT * FROM img WHERE filename='{}'",filename);
+    let mut stmt = conn.prepare(query).unwrap();
+    
+    //为空返回异常
+    if stmt.next().unwrap() == sqlite::State::Done {
+        return Ok(format!("no img found by filename:{}",filename));
+    }
+    let filename: String = stmt.read(1).unwrap();
+    let usertag: String = stmt.read(2).unwrap();
+    let outline_score: String = stmt.read(3).unwrap();
+    let img = json::object! {
+        "filename" => filename,
+        "usertag" => usertag,
+        "outline_score" => outline_score
+    };
+    Ok(format!("{}", img.dump()))
+}
 #[launch]
 fn rocket() -> _ {
     {
@@ -155,4 +175,5 @@ fn rocket() -> _ {
             .mount("/res", FileServer::from("res/"))
             .mount("/", routes![cleardatabase])
             .mount("/", routes![getimgstat_bytag])
+            .mount("/", routes![getimgstat_byfilename])
 }
