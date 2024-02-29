@@ -31,7 +31,7 @@ jobs:
           
       - name: Archive production artifacts
         run: |
-          7z a artifacts.zip ./server.exe ./res ./Rocket.toml
+          7z a artifacts.zip ./server.exe ./res ./Rocket.toml ./data.csv ./outlier_detect.py
 
 
       - name: Create Release
