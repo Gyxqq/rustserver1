@@ -247,6 +247,7 @@ fn rocket() -> _ {
         .mount("/", routes![hello])
         .mount("/", rocket::routes![uploadimg])
         .mount("/res", FileServer::from("res/"))
+        .mount("/img", FileServer::from("img/"))
         .mount("/", routes![cleardatabase])
         .mount("/", routes![getimgstat_bytag])
         .mount("/", routes![getimgstat_byfilename])
