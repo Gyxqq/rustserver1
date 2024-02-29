@@ -18,4 +18,4 @@ port = 9001
 [release]
 port = 8000
 ip_header = false
-log_level ="debug"
+log_level ="normal"
