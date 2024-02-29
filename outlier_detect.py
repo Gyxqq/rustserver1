@@ -56,9 +56,17 @@ def RLOF(data, k, reg=1e-3):
 # 初始化图片为一维数组
 def convert_to_num(img_path):
     try:
-        img = Image.open(img_path).convert('RGB')
+        if img_path[-3:] == 'png':
+            img = Image.open(img_path).convert('RGB')
+        elif img_path[-3:] == 'jpg':
+            img = Image.open(img_path)
+        elif img_path[-4:] == 'jpeg':
+            img = Image.open(img_path)
+        else:
+            print('the image format is not supported', file=sys.stderr)
+            return
     except:
-        print('图片路径错误', file=sys.stderr)
+        print('can not open the image', file=sys.stderr)
         return
     img = img.resize((64, 64))
     img = np.array(img)
@@ -71,7 +79,7 @@ def read_dataset():
         data = pd.read_csv('data.csv', header=None)
     except:
         # 输出到stderr
-        print('数据集路径错误', file=sys.stderr)
+        print('can not open the dataset', file=sys.stderr)
         return
     return data
 

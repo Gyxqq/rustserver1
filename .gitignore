@@ -1,5 +1,5 @@
 /target
-img.db
+./img.db
 .gitignore
 /img
 download.txt
