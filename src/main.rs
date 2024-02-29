@@ -8,12 +8,12 @@ use rocket::tokio::io::AsyncWriteExt;
 use rocket::Data;
 use rocket::State;
 use sqlite::Connection;
-use std::collections::vec_deque::{self, VecDeque};
+use std::collections::vec_deque::VecDeque;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread::sleep;
 use std::time::Duration;
 use std::{env, thread};
-use std::sync::Arc;
 use threadpool::ThreadPool;
 use uuid::Uuid;
 static db: Mutex<i32> = Mutex::new(0);
@@ -25,7 +25,7 @@ fn img_process(filename: &String) {
 fn process(deque: &Arc<Mutex<VecDeque<String>>>, num: i32) {
     let pool = ThreadPool::new(num as usize);
     loop {
-        let empty={
+        let empty = {
             let deque = deque.lock().unwrap();
             deque.is_empty()
         };
@@ -45,15 +45,17 @@ fn process(deque: &Arc<Mutex<VecDeque<String>>>, num: i32) {
     }
 }
 
-
 #[get("/hellow")]
 fn hello() -> Result<String, std::io::Error> {
     Ok(format!("Hello!"))
 }
 #[get("/config/cleardatabase?<password>")]
-fn cleardatabase(password:String) -> Result<String, std::io::Error> {
-    if password !=config_passwd  {
-        return Err(std::io::Error::new(std::io::ErrorKind::Other, "password error"));
+fn cleardatabase(password: String) -> Result<String, std::io::Error> {
+    if password != config_passwd {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "password error",
+        ));
     }
     let connect = db.lock().unwrap();
     let conn = Connection::open("img.db").unwrap();
@@ -63,11 +65,17 @@ fn cleardatabase(password:String) -> Result<String, std::io::Error> {
         "CREATE TABLE IF NOT EXISTS img (id INTEGER PRIMARY KEY,filename TEXT NOT NULL
         ,usertag TEXT NOT NULL,outline_score TEXT NOT NULL
         )",
-    ).unwrap();
+    )
+    .unwrap();
     Ok(format!("cleardatabase scuess!"))
 }
 #[post("/uploadimg?<type0>&<tag>", data = "<data>")]
-async fn uploadimg(deque: &State<Arc<Mutex<VecDeque<String>>>>,type0: String,tag: String,data: Data<'_>) -> Result<String, std::io::Error> {
+async fn uploadimg(
+    deque: &State<Arc<Mutex<VecDeque<String>>>>,
+    type0: String,
+    tag: String,
+    data: Data<'_>,
+) -> Result<String, std::io::Error> {
     let mut filename = Uuid::new_v4().to_string() + "." + &type0;
     filename = "img/".to_string() + &filename;
     create_dir_all("img/").await?;
@@ -107,12 +115,12 @@ async fn uploadimg(deque: &State<Arc<Mutex<VecDeque<String>>>>,type0: String,tag
 fn getimgstat_bytag(tag: String) -> Result<String, std::io::Error> {
     let connect = db.lock().unwrap();
     let conn = Connection::open("img.db").unwrap();
-    let query=format!("SELECT * FROM img WHERE usertag='{}'",tag);
+    let query = format!("SELECT * FROM img WHERE usertag='{}'", tag);
     let mut stmt = conn.prepare(query).unwrap();
     let mut imglist = json::JsonValue::new_array();
     //为空返回异常
     if stmt.next().unwrap() == sqlite::State::Done {
-        return Ok(format!("no img found by tag:{}",tag));
+        return Ok(format!("no img found by tag:{}", tag));
     }
     while let sqlite::State::Row = stmt.next().unwrap() {
         let filename: String = stmt.read(1).unwrap();
@@ -131,12 +139,12 @@ fn getimgstat_bytag(tag: String) -> Result<String, std::io::Error> {
 fn getimgstat_byfilename(filename: String) -> Result<String, std::io::Error> {
     let connect = db.lock().unwrap();
     let conn = Connection::open("img.db").unwrap();
-    let query=format!("SELECT * FROM img WHERE filename='{}'",filename);
+    let query = format!("SELECT * FROM img WHERE filename='{}'", filename);
     let mut stmt = conn.prepare(query).unwrap();
-    
+
     //为空返回异常
     if stmt.next().unwrap() == sqlite::State::Done {
-        return Ok(format!("no img found by filename:{}",filename));
+        return Ok(format!("no img found by filename:{}", filename));
     }
     let filename: String = stmt.read(1).unwrap();
     let usertag: String = stmt.read(2).unwrap();
@@ -147,6 +155,15 @@ fn getimgstat_byfilename(filename: String) -> Result<String, std::io::Error> {
         "outline_score" => outline_score
     };
     Ok(format!("{}", img.dump()))
+}
+#[get("/getdequelen")]
+fn getdequelen(deque: &State<Arc<Mutex<VecDeque<String>>>>) -> Result<String, std::io::Error> {
+    let deque = deque.lock().unwrap();
+    //json
+    let json = json::object! {
+        "len" => deque.len()
+    };
+    Ok(format!("{}", json.dump()))
 }
 #[launch]
 fn rocket() -> _ {
@@ -164,16 +181,17 @@ fn rocket() -> _ {
         .unwrap();
         println!("database open success");
     }
-        let deque = Arc::new(Mutex::new(VecDeque::<String>::new()));
-        let deque_clone = Arc::clone(&deque);
-        thread::spawn(move || process(&deque_clone,4));
-    
-        rocket::build()
-            .manage(deque)
-            .mount("/", routes![hello])
-            .mount("/", rocket::routes![uploadimg])
-            .mount("/res", FileServer::from("res/"))
-            .mount("/", routes![cleardatabase])
-            .mount("/", routes![getimgstat_bytag])
-            .mount("/", routes![getimgstat_byfilename])
+    let deque = Arc::new(Mutex::new(VecDeque::<String>::new()));
+    let deque_clone = Arc::clone(&deque);
+    thread::spawn(move || process(&deque_clone, 4));
+
+    rocket::build()
+        .manage(deque)
+        .mount("/", routes![hello])
+        .mount("/", rocket::routes![uploadimg])
+        .mount("/res", FileServer::from("res/"))
+        .mount("/", routes![cleardatabase])
+        .mount("/", routes![getimgstat_bytag])
+        .mount("/", routes![getimgstat_byfilename])
+        .mount("/", routes![getdequelen])
 }
