@@ -9,7 +9,7 @@ env:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -17,22 +17,17 @@ jobs:
 
       - name: Build project
         run: |
-          cargo build -r
-          mv target/release/server.exe server.exe
+          cargo build --release
+          mv target/release/server server
 
       - name: Get the version
         id: get_version
         run: echo "::set-output name=version::$(date +'%Y%m%d%H%M%S')"
         shell: bash
-        
-      - name: Install 7-Zip
-        run: |
-          choco install 7zip
-          
+
       - name: Archive production artifacts
         run: |
-          7z a artifacts.zip ./server.exe ./res ./Rocket.toml ./data.csv ./outlier_detect.py
-
+          tar -czvf artifacts.tar.gz ./server ./res ./Rocket.toml ./data.csv ./outlier_detect.py
 
       - name: Create Release
         id: create_release
@@ -52,6 +47,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GYX}}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts.zip
-          asset_name: artifacts.zip
-          asset_content_type: application/octet-stream
+          asset_path: ./artifacts.tar.gz
+          asset_name: artifacts.tar.gz
+          asset_content_type: application/gzip
