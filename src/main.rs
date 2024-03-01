@@ -3,7 +3,9 @@ extern crate rocket;
 use json;
 // use rand::{self, Rng};
 use rocket::data::ToByteUnit;
+use rocket::fs::relative;
 use rocket::fs::FileServer;
+use rocket::fs::NamedFile;
 use rocket::tokio::fs::{create_dir_all, File};
 use rocket::tokio::io::AsyncWriteExt;
 use rocket::Data;
@@ -11,6 +13,7 @@ use rocket::State;
 use sqlite::Connection;
 use std::collections::vec_deque::VecDeque;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Termination};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -19,7 +22,6 @@ use std::time::Duration;
 use std::{env, thread};
 use threadpool::ThreadPool;
 use uuid::Uuid;
-
 static config_passwd: &'static str = "123456";
 fn img_process(filename: &String, db: Arc<Mutex<Connection>>) {
     println!("img_process start :{}", filename);
@@ -85,6 +87,13 @@ fn process(deque: &Arc<Mutex<VecDeque<String>>>, num: i32, db: Arc<Mutex<Connect
 fn hello() -> Result<String, std::io::Error> {
     Ok(format!("Hello!"))
 }
+#[get("/")]
+async fn index() -> Option<NamedFile> {
+    NamedFile::open(Path::new("assets/").join("index.html"))
+        .await
+        .ok()
+}
+
 #[get("/config/cleardatabase?<password>")]
 async fn cleardatabase(
     password: String,
@@ -219,7 +228,6 @@ async fn getdequelen(db: &State<Arc<Mutex<Connection>>>) -> Result<String, std::
     };
     Ok(format!("{}", json.dump()))
     // let count = stmt.next().unwrap();
-
 }
 #[launch]
 fn rocket() -> _ {
@@ -246,10 +254,11 @@ fn rocket() -> _ {
         .manage(conn)
         .mount("/", routes![hello])
         .mount("/", rocket::routes![uploadimg])
-        .mount("/res", FileServer::from("res/"))
-        .mount("/img", FileServer::from("img/"))
         .mount("/", routes![cleardatabase])
         .mount("/", routes![getimgstat_bytag])
         .mount("/", routes![getimgstat_byfilename])
         .mount("/", routes![getdequelen])
+        .mount("/", routes![index])
+        .mount("/img", FileServer::from(".//img"))
+        .mount("/assets", FileServer::from("./assets"))
 }
