@@ -1,0 +1,6 @@
+/target
+./img.db
+.gitignore
+/img
+download.txt
+/errlog
