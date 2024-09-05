@@ -34,6 +34,7 @@ jobs:
           7z a artifacts.zip ./server.exe ./res ./Rocket.toml ./data.csv ./outlier_detect.py
 
 
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
